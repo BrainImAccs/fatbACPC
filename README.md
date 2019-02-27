@@ -1,4 +1,4 @@
-# Brain Imaging Accesosoires: Fully automatic tilting of brainscans to ACPC (fatbACPC)
+# Brain Imaging Accessoires: Fully automatic tilting of brainscans to ACPC (fatbACPC)
 
 Everyday CT or MR examinations are supposed to be acquired in the same fashion, but slight deviations (e.g. due to subject/patient movement, differences in planning standards for MR and CT, or improper planning) may result in not easily comparable images. The fully automatic tilting of brainscans to Anterior Commissure - Posterior Commissure (fatbACPC) tool is meant to align CT and MR scans to the [ACPC](https://radiopaedia.org/articles/anterior-commissure-posterior-commissure-line) line to yield easily comparable images.
 
