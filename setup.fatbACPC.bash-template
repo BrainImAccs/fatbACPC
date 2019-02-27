@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# Setup options for fatbACPC
+#
+
+###
+### You will need to have https://github.com/brainimaccs/brainstem installed
+###
+
+# Source some global setup options
+#
+. "${__dir}/../brainstem/setup.brainstem.bash"
+
+# Add this number to the number of the series to be processed
+#
+base_series_no=31100
+
+# Repetition time (TR) threshold to differentiate T1 and T2 weighted series
+#
+tr_threshold_t1t2=2500
+
+# Intended slice thickness for DICOM export in millimetres (mm),
+# which will be matched as close as possible.
+#
+# Use -1 to not generate any mean slabs, for example on isometric
+# MRI acquisitions.
+#
+intended_slice_thickness_ct=5
+intended_slice_thickness_t1=-1
+intended_slice_thickness_t2=-1
+
+# Path to the templates relative to setup.fatbACPC.bash
+#
+template_ct="${__dir}/templates/scct_unsmooth.nii.gz"
+template_t1="${__dir}/templates/mni_icbm152_t1_tal_nlin_asym_09c.nii.gz"
+template_t2="${__dir}/templates/mni_icbm152_t2_tal_nlin_asym_09c.nii.gz"
+
+# Setup FSL
+#
+export FSLDIR="/path/to/fsl-5.0.11"
+source ${FSLDIR}/etc/fslconf/fsl.sh
+
+#
+# DO NOT CHANGE
+#
+# Get the full path to the templates
+#
+template_ct=$(realpath "$template_ct")
+template_t1=$(realpath "$template_t1")
+template_t2=$(realpath "$template_t2")
