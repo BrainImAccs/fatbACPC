@@ -2,7 +2,9 @@
 
 Everyday CT or MR examinations are supposed to be acquired in the same fashion, but slight deviations (e.g. due to subject/patient movement, differences in planning standards for MR and CT, or improper planning) may result in not easily comparable images. The fully automatic tilting of brainscans to Anterior Commissure - Posterior Commissure (fatbACPC) tool is meant to align CT and MR scans to the [ACPC](https://radiopaedia.org/articles/anterior-commissure-posterior-commissure-line) line to yield easily comparable images.
 
-fatbACPC depends on [brainstem](https://github.com/brainimaccs/brainstem) to receive and handle DICOM files from the Picture Archiving and Communication System (PACS) or modalities, process the scans in a parallel fashion and then export the results back to the PACS.
+fatbACPC is meant to be used as a submodule of [brainstem](https://github.com/brainimaccs/brainstem).
+
+Please note, this software is research-only.
 
 # Details
 
@@ -51,20 +53,14 @@ We are listing the software versions we used (likely the latest available during
 
 ## Installation
 
-Change to the directory where the brainstem directory resides. fatbACPC and brainstem directories are supposed to be at the same level.
-
-```bash
-$ cd /path/to/brainiaccs
-$ ls -lah # Make sure, that there is a "brainstem" directory, which contains, well, brainstem
-$ git clone https://github.com/brainimaccs/fatbACPC.git
-$ cd fatbACPC
-```
+fatbACPC is in the `modules/` subdirectory of brainstem (after you [initialized and updated the submodules](https://github.com/brainimaccs/brainstem#installation)).
 
 # Configuration
 
 Copy the setup templates:
 
 ```bash
+$ cd modules/fatbACPC
 $ cp setup.fatbACPC.bash-template setup.fatbACPC.bash
 ```
 
