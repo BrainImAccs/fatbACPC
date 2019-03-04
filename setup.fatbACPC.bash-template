@@ -9,7 +9,7 @@
 
 # Source some global setup options
 #
-. "${__dir}/../brainstem/setup.brainstem.bash"
+. "${__dir}/../../setup.brainstem.bash"
 
 # Add this number to the number of the series to be processed
 #

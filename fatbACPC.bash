@@ -64,7 +64,7 @@ read -r -d '' __helptext <<-'EOF' || true # exits non-zero when EOF encountered
 EOF
 
 # shellcheck source=b3bp.bash
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../brainstem/tools/b3bp.bash"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/b3bp.bash"
 
 # Set version
 version_acpc=$(cd "${__dir}" && git describe --always)
@@ -148,19 +148,19 @@ fi
 ##############################################################################
 
 # shellcheck source=../brainstem/tools/bash/getDCMTag.bash
-source "${__dir}/../brainstem/tools/bash/getDCMTag.bash"
+source "${__dir}/../../tools/bash/getDCMTag.bash"
 # shellcheck source=../brainstem/tools/bash/convertDCM2NII.bash
-source "${__dir}/../brainstem/tools/bash/convertDCM2NII.bash"
+source "${__dir}/../../tools/bash/convertDCM2NII.bash"
 # shellcheck source=bash/tools/acpcAlignment.bash
 source "${__dir}/tools/bash/acpcAlignment.bash"
 # shellcheck source=bash/tools/meanSlab.bash
 source "${__dir}/tools/bash/meanSlab.bash"
 # shellcheck source=../brainstem/tools/bash/convertNII2DCM.bash
-source "${__dir}/../brainstem/tools/bash/convertNII2DCM.bash"
+source "${__dir}/../../tools/bash/convertNII2DCM.bash"
 # shellcheck source=../brainstem/tools/bash/copyDCMTags.bash
-source "${__dir}/../brainstem/tools/bash/copyDCMTags.bash"
+source "${__dir}/../../tools/bash/copyDCMTags.bash"
 # shellcheck source=../brainstem/tools/bash/sendDCM.bash
-source "${__dir}/../brainstem/tools/bash/sendDCM.bash"
+source "${__dir}/../../tools/bash/sendDCM.bash"
 
 
 ### Runtime
