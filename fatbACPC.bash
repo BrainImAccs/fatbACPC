@@ -14,11 +14,11 @@
 #
 # Especially interesting for CT scans is the option to automatically generate mean slabs. By
 # default, mean slabs of 5 mm thickness are generated for CT scans. When generating the slabs,
-# an algorithm finds the top non-air slice in the volume and starts the mea
+# the top non-air slice of the volume is identified and used as a starting point for the mean slabs.
 #
 # The aligned scans will be automatically exported back to the PACS.
 #
-# Please run ./acpc.bash -h for usage information.
+# Please run ./fatbACPC.bash -h for usage information.
 # See setup.fatbACPC.bash (and also setup.brainstem.bash) for configuration options.
 # Check README for requirements.
 #
@@ -68,6 +68,9 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/b3bp.bash"
 
 # Set version
 version_acpc=$(cd "${__dir}" && git describe --always)
+
+# Set UID prefix
+prefixUID=11
 
 ### Signal trapping and backtracing
 ##############################################################################
@@ -151,10 +154,6 @@ fi
 source "${__dir}/../../tools/bash/getDCMTag.bash"
 # shellcheck source=../brainstem/tools/bash/convertDCM2NII.bash
 source "${__dir}/../../tools/bash/convertDCM2NII.bash"
-# shellcheck source=bash/tools/acpcAlignment.bash
-source "${__dir}/tools/bash/acpcAlignment.bash"
-# shellcheck source=bash/tools/meanSlab.bash
-source "${__dir}/tools/bash/meanSlab.bash"
 # shellcheck source=../brainstem/tools/bash/convertNII2DCM.bash
 source "${__dir}/../../tools/bash/convertNII2DCM.bash"
 # shellcheck source=../brainstem/tools/bash/copyDCMTags.bash
@@ -162,11 +161,16 @@ source "${__dir}/../../tools/bash/copyDCMTags.bash"
 # shellcheck source=../brainstem/tools/bash/sendDCM.bash
 source "${__dir}/../../tools/bash/sendDCM.bash"
 
+# shellcheck source=bash/tools/acpcAlignment.bash
+source "${__dir}/tools/bash/acpcAlignment.bash"
+# shellcheck source=bash/tools/meanSlab.bash
+source "${__dir}/tools/bash/meanSlab.bash"
+
 
 ### Runtime
 ##############################################################################
 
-info "Start ACPC alignment:"
+info "Starting fully automatic tilting of brainscans to Anterior Commissure - Posterior Commissure line (fatbACPC):"
 info "  version: ${version_acpc}"
 info "  source_dir: ${source_dir}"
 
@@ -175,7 +179,7 @@ workdir=$(TMPDIR="${tmpdir}" mktemp --directory -t "${__base}-XXXXXX")
 info "  workdir: ${workdir}"
 
 # Copy all DICOM files, except for files which are of the modality presentation
-# state (PR), into the workdir
+# state (PR), into the workdir and create an index file
 mkdir "${workdir}/dcm-in"
 ${dcmftest} "${source_dir}/"* | \
   grep -E "^yes:" | \
@@ -183,15 +187,10 @@ ${dcmftest} "${source_dir}/"* | \
     modality=$(getDCMTag "${dcm}" "0008,0060" "n")
     if [[ $modality != "PR" ]]; then
       cp "${dcm}" "${workdir}/dcm-in"
+      echo $(LANG=C printf "%03d" $(getDCMTag "${dcm}" "0020,0013" "n")) $dcm >> "${workdir}/index-dcm-in"
     fi
   done || true
 set -u modality
-
-# Create an index file of all DICOM files, sorted by file modification time (which
-# is essentially assuming, that the files are sent in a meaningful order)
-find "${workdir}/dcm-in/" -maxdepth 1 -type f -printf "%Ts\t%p\n" | \
-  sort -n | \
-  cut -f2 > "${workdir}/index-dcm-in"
 
 # Get the middle line (minus two) of the index-dcm-in file as the reference DICOM file
 # The reference DICOM file will be used as a source for DICOM tags, when (at the end)
@@ -201,11 +200,10 @@ find "${workdir}/dcm-in/" -maxdepth 1 -type f -printf "%Ts\t%p\n" | \
 # setting in case of MR examinations, as well.
 dcm_index_lines=$(wc -l "${workdir}/index-dcm-in" | cut -d" " -f1)
 dcm_index_lines_middle=$(echo "($dcm_index_lines / 2) - 2" | bc)
-ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in")
+ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in" | cut -d" " -f2)
 info "  ref_dcm: ${ref_dcm}"
 
-# Get and save the patient name (for debugging reasons), should be commented
-# out in production
+# Get and save the subject's name (for debugging reasons)
 getDCMTag "${ref_dcm}" "0010,0010" > "${workdir}/name"
 
 # Get modality type and set modality-specific options
@@ -255,45 +253,35 @@ fi
 
 ### Step 3: Convert NIfTI back to DICOM
 mkdir "${workdir}/dcm-out"
-# Get the series number from the reference DICOM and add $base_series_no from setup.acpc.bash
+
+# Get the series number from the reference DICOM and add $base_series_no from setup.fatbACPC.bash
 ref_series_no=$(getDCMTag "${ref_dcm}" "0020,0011")
 series_no=$(echo "${base_series_no} + ${ref_series_no}" | bc)
-convertNII2DCM "${result}" "${workdir}/dcm-out" ${series_no} "${ref_dcm}" || error "convertNII2DCM failed"
 
-### Step 4: Modify some more DICOM tags specific to ACPC (i.e. unlikely to be shared with future scripts)
+# Generate series description
+# - "s/[0-9]\.[0-9]\+ //" - Remove slice thickness in the series name (e.g. 2.0)
+# - "s/$/ ACPC ${slice_thickness}/" - Append ACPC and the slice thickness
+# - "s/\s\+$//" - if there is no meanSlab generated, and therefore no slice
+#                 thickness just remove the trailing space
+series_description=$(echo $(getDCMTag "${ref_dcm}" "0008,103e" "n") | sed -e "s/[0-9]\.[0-9]\+ //" -e "s/$/ ACPC ${slice_thickness}/" -e "s/\s\+$//")
 
-# Modify series name
-# "s/[0-9]\.[0-9]\+ //" - Remove slice thickness in the series name (e.g. 2.0)
-# "s/$/ ACPC ${slice_thickness}/" - Append ACPC and the slice thickness
-# "s/\s\+$//" - if there is no meanSlab generated, and therefore no slice
-#               thickness just remove the trailing space
-"${dcmdump}" \
-  --print-all \
-  --search 0008,103e \
-  "${ref_dcm}" | \
-    sed -e 's/\(([0-9a-f]\{4\},[0-9a-f]\{4\})\) [A-Z][A-Z] \[\(.*\)\].*#.*/\1 \2/' -e 's/\\/\\\\/g' | while read tag data; do \
-      data=$(echo "$data" | sed -e "s/[0-9]\.[0-9]\+ //" -e "s/$/ ACPC ${slice_thickness}/" -e "s/\s\+$//")
-      "${dcmodify}" --insert "${tag}"="${data}" "${workdir}/dcm-out"/*.dcm
-    done
-# Remove the *.bak files generated by dcmmodify
-rm "${workdir}/dcm-out"/*.bak || true
+convertNII2DCM "${result}" "${workdir}/dcm-out" ${series_no} "${series_description}" "${ref_dcm}" || error "convertNII2DCM failed"
+
+### Step 4: Modify some more DICOM tags specific to fatbACPC
 
 # Set some version information on this tool
 "${dcmodify}" \
+  --no-backup \
   --insert "(0008,1090)"="BrainImAccs fatbACPC - Research" \
   --insert "(0018,1020)"="BrainImAccs fatbACPC ${version_acpc}" \
   "${workdir}/dcm-out"/*
-# Remove the *.bak files generated by dcmmodify
-rm "${workdir}/dcm-out"/*.bak
 
 # Set slice thickness and gap, if a meanSlab was generated
 if [[ $intended_slice_thickness -gt 0 ]]; then
   "${dcmodify}" \
+    --no-backup \
     --insert "(0018,0050)"="${slice_thickness}" \
     "${workdir}/dcm-out"/*
-
-    # Remove the *.bak files generated by dcmmodify
-    rm "${workdir}/dcm-out"/*.bak
 else
   # Otherwise, copy the values from the reference DICOM file
   copy_dcm_tags="
