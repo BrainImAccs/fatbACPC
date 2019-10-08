@@ -4,14 +4,17 @@
 #
 
 ###
-### You will need to have https://github.com/brainimaccs/brainstem installed
+### You will need to have https://github.com/BrainImAccs/BrainSTEM
+### This is essentially a module of BrainSTEM
+###
+### You might want to refer to the documentation at https://github.com/BrainImAccs/fatbACPC
 ###
 
 # Source some global setup options
 #
 . "${__dir}/../../setup.brainstem.bash"
 
-# Add this number to the number of the series to be processed
+# Add this number to the original series's number (derived from DICOM tag 0020,0011)
 #
 base_series_no=31100
 
