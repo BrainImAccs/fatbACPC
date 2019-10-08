@@ -3,13 +3,15 @@
 # Generate mean slabs from a NIfTI image volume, approximating the slab thickness based on the dimensions of
 # the input volume. The function exports a variable slice_thickness, which contains the actual slice thickness.
 #
-# To make the mean slabs more comparable, we always try to begin slab generation with the first non-air-only slice.
+# To make the mean slabs more comparable, we always try to begin slab generation with the first non-air-only slice,
+# although this only works for CT a the moment.
 #
+
 
 # The function checkForAir takes a slice number and re-uses some variables local to the "meanSlab" function. It
 # checks the minimum value of the central 48 x 48 voxels of a slice. If the minimum is >0, a non-air slice is 
 # assumed. 
-
+#
 # Given that MR voxel values are not normalized, this is essentially only used in the context of CT
 # Hounsfield units.
 #
