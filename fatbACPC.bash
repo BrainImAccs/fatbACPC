@@ -179,10 +179,11 @@ workdir=$(TMPDIR="${tmpdir}" mktemp --directory -t "${__base}-XXXXXX")
 info "  workdir: ${workdir}"
 
 # Copy all DICOM files, except for files which are of the modality presentation
-# state (PR), into the workdir and create an index file
+# state (PR) or a residual ref_dcm.dcm, into the workdir and create an index file
 mkdir "${workdir}/dcm-in"
 ${dcmftest} "${source_dir}/"* | \
   grep -E "^yes:" | \
+  grep -vE "^yes: .*\/ref_dcm.dcm$" | \
   while read bool dcm; do
     modality=$(getDCMTag "${dcm}" "0008,0060" "n")
     if [[ $modality != "PR" ]]; then
@@ -254,8 +255,9 @@ fi
 ### Step 3: Convert NIfTI back to DICOM
 mkdir "${workdir}/dcm-out"
 
+info "Prepare convertNII2DCM"
 # Get the series number from the reference DICOM and add $base_series_no from setup.fatbACPC.bash
-ref_series_no=$(getDCMTag "${ref_dcm}" "0020,0011")
+ref_series_no=$(getDCMTag "${ref_dcm}" "0020,0011" "n")
 series_no=$(echo "${base_series_no} + ${ref_series_no}" | bc)
 
 # Generate series description
@@ -263,7 +265,8 @@ series_no=$(echo "${base_series_no} + ${ref_series_no}" | bc)
 # - "s/$/ ACPC ${slice_thickness}/" - Append ACPC and the slice thickness
 # - "s/\s\+$//" - if there is no meanSlab generated, and therefore no slice
 #                 thickness just remove the trailing space
-series_description=$(echo $(getDCMTag "${ref_dcm}" "0008,103e" "n") | sed -e "s/[0-9]\.[0-9]\+ //" -e "s/$/ ACPC ${slice_thickness}/" -e "s/\s\+$//")
+series_description=$(getDCMTag "${ref_dcm}" "0008,103e" | sed -e "s/[0-9]\.[0-9]\+ //" -e "s/$/ ACPC ${slice_thickness}/" -e "s/\s\+$//")
+info "    New series description: ${series_description}"
 
 convertNII2DCM "${result}" "${workdir}/dcm-out" ${series_no} "${series_description}" "${ref_dcm}" || error "convertNII2DCM failed"
 
