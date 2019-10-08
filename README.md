@@ -2,9 +2,9 @@
 
 Everyday CT or MR examinations are supposed to be acquired in the same fashion, but slight deviations (e.g. due to subject/patient movement, differences in planning standards for MR and CT, or improper planning) may result in not easily comparable images. The fully automatic tilting of brainscans to Anterior Commissure - Posterior Commissure (fatbACPC) tool is meant to align CT and MR scans to the [ACPC](https://radiopaedia.org/articles/anterior-commissure-posterior-commissure-line) line to yield easily comparable images.
 
-fatbACPC is meant to be used as a submodule of [brainstem](https://github.com/brainimaccs/brainstem).
+fatbACPC is meant to be used as a submodule of [BrainSTEM](https://github.com/BrainImAccs/BrainSTEM).
 
-Please note, this software is research-only.
+Please note, this software is research-only and must not be used for clinical decisions/diagnosis.
 
 # Details
 
@@ -41,7 +41,7 @@ Options to `fatbACPC.bash`:
 
 We are listing the software versions we used (likely the latest available during development), but we are currently not aware that we rely on any features that are specific to one of the software's versions.
 
-* [brainstem](https://github.com/brainimaccs/brainstem)
+* [BrainSTEM](https://github.com/BrainImAccs/BrainSTEM)
 * [BASH](https://www.gnu.org/software/bash/), we used v4.4.19(1)
 * [bc](https://www.gnu.org/software/bc/), we used 1.07.1
 * [FSL](https://fsl.fmrib.ox.ac.uk/), we used v5.0.11
@@ -53,7 +53,7 @@ We are listing the software versions we used (likely the latest available during
 
 ## Installation
 
-fatbACPC is in the `modules/` subdirectory of brainstem (after you [initialized and updated the submodules](https://github.com/brainimaccs/brainstem#installation)).
+fatbACPC is in the `modules/` subdirectory of BrainSTEM (after you [initialized and updated the submodules](https://github.com/BrainImAccs/BrainSTEM#installation)).
 
 # Configuration
 
@@ -88,11 +88,11 @@ intended_slice_thickness_t2=-1
 
 # Running
 
-Make sure that you [enable fatbACPC in brainstem](https://github.com/brainimaccs/brainstem#assign-jobs-to-queue).
+Make sure that you [enable fatbACPC in BrainSTEM](https://github.com/BrainImAccs/BrainSTEM#assign-jobs-to-queue).
 
 # Debugging
 
-Please see https://github.com/brainimaccs/brainstem#debugging
+Please see https://github.com/BrainImAccs/BrainSTEM#debugging
 
 # Acknowledgements
 
