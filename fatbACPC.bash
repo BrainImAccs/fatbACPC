@@ -50,7 +50,7 @@ read -r -d '' __usage <<-'EOF' || true # exits non-zero when EOF encountered
   -i --input [arg]    Directory containing the DICOM input files. Required.
   -k --keep-workdir   After running, copy the temporary work directory into the input directory.
   -c --cleanup        After running, empty the source directory (reference DICOM and translation matrices are kept)
-  -p --no-pacs        Do not send the results to the PACS.
+  -n --no-pacs        Do not send the results to the PACS.
   -v                  Enable verbose mode, print script as it is executed.
   -d --debug          Enables debug mode.
   -h --help           This page.
@@ -297,7 +297,7 @@ fi
 info "Modified DICOM tags specific to $(basename ${0})"
 
 ### Step 5: Send DCM to PACS
-if [[ ! "${arg_p:?}" = "1" ]]; then
+if [[ ! "${arg_n:?}" = "1" ]]; then
   sendDCM "${workdir}/dcm-out/" || error "sendDCM failed"
 fi
 
