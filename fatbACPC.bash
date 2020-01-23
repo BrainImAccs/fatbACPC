@@ -41,6 +41,9 @@
 # The BASH3 Boilerplate is under the MIT License (MIT) and is
 # Copyright (c) 2013 Kevin van Zonneveld and contributors
 
+### Handle errors
+##############################################################################
+set -o pipefail
 
 ### Command line options
 ##############################################################################
@@ -201,7 +204,7 @@ set -u modality
 # setting in case of MR examinations, as well.
 dcm_index_lines=$(wc -l "${workdir}/index-dcm-in" | cut -d" " -f1)
 dcm_index_lines_middle=$(echo "($dcm_index_lines / 2) - 2" | bc)
-ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in" | cut -d" " -f2)
+ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in" | cut -d" " -f2-)
 info "  ref_dcm: ${ref_dcm}"
 
 # Get and save the subject's name (for debugging reasons)
