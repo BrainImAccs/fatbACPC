@@ -38,10 +38,12 @@ template_ct="${__dir}/templates/scct_unsmooth.nii.gz"
 template_t1="${__dir}/templates/mni_icbm152_t1_tal_nlin_asym_09c.nii.gz"
 template_t2="${__dir}/templates/mni_icbm152_t2_tal_nlin_asym_09c.nii.gz"
 
-# Setup FSL
+# Setup FSL (if not loaded already)
 #
-export FSLDIR="/path/to/fsl-5.0.11"
-source ${FSLDIR}/etc/fslconf/fsl.sh
+if [[ -z $FSLDIR ]]; then
+  export FSLDIR="/path/to/fsl-5.0.11"
+  source ${FSLDIR}/etc/fslconf/fsl.sh
+fi
 
 #
 # DO NOT CHANGE

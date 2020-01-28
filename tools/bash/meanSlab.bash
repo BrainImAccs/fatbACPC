@@ -22,19 +22,19 @@ function checkForAir {
   # and save it as a temporary file
   "${FSLDIR}/bin/fslroi" \
     "${input_nii}" \
-    "$(dirname ${input_nii})/temp${slice}.nii.gz" \
+    "$(dirname ${input_nii})/temp${slice}" \
     $(echo "($ref_dim1 / 2) - 7" | bc) 48 \
     $(echo "($ref_dim2 / 2) - 7" | bc) 48 \
     $slice 1
 
   # Calculate the minimum value of the voxel values in that ROI
   local center_roi=$("${FSLDIR}/bin/fslstats" \
-    "$(dirname ${input_nii})/temp${slice}.nii.gz" \
+    "$(dirname ${input_nii})/temp${slice}" \
     -R | \
       cut -d" " -f2
   )
   # Remove the temporary file
-  rm "$(dirname ${input_nii})/temp${slice}.nii.gz"
+  rm "$(dirname ${input_nii})/temp${slice}"*.nii*
 
   # If the minimum voxel value is >0, declare that slice SOLID, otherwise AIR
   if [[ $(echo "${center_roi} > 0" | bc -l) -eq 1 ]]; then
@@ -118,7 +118,7 @@ function meanSlab {
       -roi 0 $ref_dim1 0 $ref_dim2 $cZ $number_of_slices_in_slab 0 1 \
       -Zmean \
       -mul $(echo "$ref_dim3 / $number_of_slices_in_slab" | bc -l) \
-      "${output_dir}/slab_$(LANG=C printf "%07.2f" $cZ).nii.gz"
+      "${output_dir}/slab_$(LANG=C printf "%07.2f" $cZ)"
   done
   # Wait for all slabs to be generated
   LANG=C sem --wait
@@ -127,8 +127,8 @@ function meanSlab {
   # Merge the slabs into a single NIfTI
   info "  fslmerge start"
   "${FSLDIR}/bin/fslmerge" \
-    -z "${output_dir}/merged.nii.gz" \
-    "${output_dir}/slab_"*.nii.gz
+    -z "${output_dir}/merged" \
+    "${output_dir}/slab_"*.nii*
   info "  fslmerge done"
 
   # Export the actual slice thickness, rounded to two decimal places
@@ -136,9 +136,9 @@ function meanSlab {
 
   info "    Adjusting pixdim3 to ${slice_thickness}"
   # Using the input image volume as a template, create a new, empty image volume with an adjusted z-dimension
-  "${FSLDIR}/bin/fslhd" -x "${output_dir}/merged.nii.gz" | \
+  "${FSLDIR}/bin/fslhd" -x "${output_dir}/merged" | \
     sed -e "s/dz = '[0-9\.]\+'/dz = '${slice_thickness}'/" | \
-    "${FSLDIR}/bin/fslcreatehd" - "${output_dir}/merged.nii.gz"
+    "${FSLDIR}/bin/fslcreatehd" - "${output_dir}/merged"
 
   info "meanSlab done"
 }

@@ -181,6 +181,15 @@ info "  source_dir: ${source_dir}"
 workdir=$(TMPDIR="${tmpdir}" mktemp --directory -t "${__base}-XXXXXX")
 info "  workdir: ${workdir}"
 
+# When the workdir will be kept, do compress intermediary files, otherwise don't
+if [[ "${arg_k:?}" = "1" ]]; then
+  info "  FSLOUTPUTTYPE: NIFTI_GZ (for space, since the workdir will be kept)"
+  export FSLOUTPUTTYPE="NIFTI_GZ"
+else
+  info "  FSLOUTPUTTYPE: NIFTI (for speed, since the workdir will be discarded)"
+  export FSLOUTPUTTYPE="NIFTI"
+fi
+
 # Copy all DICOM files, except for files which are of the modality presentation
 # state (PR) or a residual ref_dcm.dcm, into the workdir and create an index file
 mkdir "${workdir}/dcm-in"
@@ -190,7 +199,7 @@ ${dcmftest} "${source_dir}/"* | \
   while read bool dcm; do
     modality=$(getDCMTag "${dcm}" "0008,0060" "n")
     if [[ $modality != "PR" ]]; then
-      cp "${dcm}" "${workdir}/dcm-in"
+      ln -s "${dcm}" "${workdir}/dcm-in"
       echo $(LANG=C printf "%03d" $(getDCMTag "${dcm}" "0020,0013" "n")) $dcm >> "${workdir}/index-dcm-in"
     fi
   done || true
@@ -236,7 +245,11 @@ info "  intended_slice_thickness: ${intended_slice_thickness}"
 ### Step 1: Create NII of original DCM files
 mkdir "${workdir}/nii-in"
 # convertDCM2NII exports the variable nii, which contains the full path to the converted NII file
-convertDCM2NII "${workdir}/dcm-in/" "${workdir}/nii-in" || error "convertDCM2NII failed"
+if [[ $FSLOUTPUTTYPE == "NIFTI" ]]; then
+  convertDCM2NII "${workdir}/dcm-in/" "${workdir}/nii-in" "n" || error "convertDCM2NII failed"
+else
+  convertDCM2NII "${workdir}/dcm-in/" "${workdir}/nii-in" || error "convertDCM2NII failed"
+fi
 
 ### Step 2: ACPC alignment
 mkdir "${workdir}/acpc"
@@ -249,7 +262,7 @@ if [[ $intended_slice_thickness -gt 0 ]]; then
   # meanSlab exports the variable slice_thickness, which is the slice thickness
   # as close to the intended slice thickness as possible
   meanSlab "${acpc_out}" "${workdir}/acpc/meanSlab" ${intended_slice_thickness} || error "meanSlab failed"
-  result="${workdir}/acpc/meanSlab/merged.nii.gz"
+  result=$(realpath "${workdir}/acpc/meanSlab/merged"*.nii*)
 else
   slice_thickness=""
   result="${acpc_out}"
