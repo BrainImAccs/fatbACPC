@@ -9,7 +9,7 @@
 
 # The following function adjusts the transformation matrix to center the old image volume in the new ACPC-aligned image volume
 function doCenter {
-  # Original imgae volume in the NIfTI format
+  # Original image volume in the NIfTI format
   local input_nii="${1}"
   # ACPC-aligned image volume to be centered
   local acpc_out="${2}"
