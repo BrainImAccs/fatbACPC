@@ -130,7 +130,10 @@ RUN set -eux \
   && cd /opt/BrainSTEM \
   && git checkout docker-cat12.7-standalone \
   && git submodule update --init modules/${BIA_MODULE} \
-  && cd /opt/BrainSTEM/modules/${BIA_MODULE} \ # Need to switch to docker branch if its ready
+  && cd /opt/BrainSTEM/modules/${BIA_MODULE} \
+  && cat /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash-template | \
+      sed -e "s%^FSLDIR=/path/to/fsl-${FSL_VERSION}%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
+      > /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash \
   && cp \
       /opt/BrainSTEM/setup.brainstem.bash-template \
       /opt/BrainSTEM/setup.brainstem.bash \
