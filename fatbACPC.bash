@@ -52,7 +52,8 @@ set -o pipefail
 read -r -d '' __usage <<-'EOF' || true # exits non-zero when EOF encountered
   -i --input [arg]    Directory containing the DICOM input files. Required.
   -k --keep-workdir   After running, copy the temporary work directory into the input directory.
-  -c --cleanup        After running, empty the source directory (reference DICOM and translation matrices are kept)
+  -c --cleanup        After running, empty the source directory (reference DICOM, translation matrices and logs are kept).
+  -t --total-cleanup  After running, delete the source directory.
   -n --no-pacs        Do not send the results to the PACS.
   -v                  Enable verbose mode, print script as it is executed.
   -d --debug          Enables debug mode.
@@ -80,9 +81,14 @@ prefixUID=11
 
 function __b3bp_cleanup_before_exit {
   # Delete the temporary workdir, if necessary
-  if [[ ! "${arg_k:?}" = "1" ]] && [[ "${workdir:-}" ]]; then
+  if { [[ ! "${arg_k:?}" = "1" ]] || [[ "${arg_t:?}" = "1" ]]; } && [[ "${workdir:-}" ]]; then
     rm -rf "${workdir}"
-    info "Removed temporary workdir"
+    info "Removed temporary workdir ${workdir}"
+  fi
+  # Delete the source dir, if necessary
+  if [[ "${arg_t:?}" = "1" ]] && [[ "${source_dir:-}" ]]; then
+    rm -rf "${source_dir}"
+    info "Removed source dir ${source_dir}"
   fi
 }
 trap __b3bp_cleanup_before_exit EXIT
@@ -191,7 +197,8 @@ else
 fi
 
 # Copy all DICOM files, except for files which are of the modality presentation
-# state (PR) or a residual ref_dcm.dcm, into the workdir and create an index file
+# state (PR) or a residual ref_dcm.dcm, into the workdir and create an index file,
+# which contains the ImagePositionPatient DICOM tag (for sorting) and the DICOM file
 mkdir "${workdir}/dcm-in"
 ${dcmftest} "${source_dir}/"* | \
   grep -E "^yes:" | \
@@ -199,21 +206,31 @@ ${dcmftest} "${source_dir}/"* | \
   while read bool dcm; do
     modality=$(getDCMTag "${dcm}" "0008,0060" "n")
     if [[ $modality != "PR" ]]; then
-      ln -s "${dcm}" "${workdir}/dcm-in"
-      echo $(LANG=C printf "%03d" $(getDCMTag "${dcm}" "0020,0013" "n")) $dcm >> "${workdir}/index-dcm-in"
+      cp "${dcm}" "${workdir}/dcm-in"
+      instanceNo=$(LANG=C printf "%03d" $(getDCMTag "${dcm}" "0020,0013" "n"))
+      imagePosPatient=$(getDCMTag "${dcm}" "0020,0032" "n")
+      echo ${instanceNo}\\"${imagePosPatient}" $dcm >> "${workdir}/index-dcm-in-unsorted"
+      # Please ignore the following ", it just fixes vim syntax highlighting after aboves escape
     fi
   done || true
 set -u modality
+set -u imagePosPatient
+
+# The ImagePositionPatient tag contains information on the x, y and z position in mm of the
+# upper left voxel of the image. We sort by the z (axial), then x (sagittal), then y (coronal)
+# position to later extract the reference DICOM from the middle of the stack (see below) and
+# for properly merging colour maps with the original DICOMs
+sort -n -k4,4 -k2,2 -k3,3 -t'\' "${workdir}/index-dcm-in-unsorted" | sed -e 's/\\/ /' > "${workdir}/index-dcm-in"
 
 # Get the middle line (minus two) of the index-dcm-in file as the reference DICOM file
 # The reference DICOM file will be used as a source for DICOM tags, when (at the end)
-# a DICOM dataset is created to send it back to the PACS. Since reference scans might
+# a DICOM dataset is created to send it back to the PACS. Since reference images might
 # be embedded inside the DICOM stack at the beginning, end, or in the middle, we
 # choose a DICOM file two off the center. This should yield a reasonable window/center
 # setting in case of MR examinations, as well.
 dcm_index_lines=$(wc -l "${workdir}/index-dcm-in" | cut -d" " -f1)
 dcm_index_lines_middle=$(echo "($dcm_index_lines / 2) - 2" | bc)
-ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in" | cut -d" " -f2-)
+ref_dcm=$(sed -n "${dcm_index_lines_middle},${dcm_index_lines_middle}p" "${workdir}/index-dcm-in" | cut -d" " -f3)
 info "  ref_dcm: ${ref_dcm}"
 
 # Get and save the subject's name (for debugging reasons)
@@ -246,6 +263,7 @@ info "  intended_slice_thickness: ${intended_slice_thickness}"
 mkdir "${workdir}/nii-in"
 # convertDCM2NII exports the variable nii, which contains the full path to the converted NII file
 if [[ $FSLOUTPUTTYPE == "NIFTI" ]]; then
+  # The third parameter to convertDCM2NII intentionally disables the creation of a gzip'ed NII
   convertDCM2NII "${workdir}/dcm-in/" "${workdir}/nii-in" "n" || error "convertDCM2NII failed"
 else
   convertDCM2NII "${workdir}/dcm-in/" "${workdir}/nii-in" || error "convertDCM2NII failed"
@@ -326,9 +344,9 @@ cp "${workdir}/acpc/xfms/"*.mat "${source_dir}/"
 # Remove the DICOM files from the source directory, but keep ref_dcm.dcm, translation matrices and log (if it exists)
 if [[ "${arg_c:?}" = "1" ]]; then
   if [ -e "${source_dir}/log" ]; then
-    info "Removing everything except reference DICOM, translation matrices and log from the source dir"
+    info "Removing everything except reference DICOM and log from the source dir."
   else
-    info "Removing everything except reference DICOM and translation matrices from the source dir"
+    info "Removing everything except reference DICOM from the source dir."
   fi
   find "${source_dir}" -type f -not -name 'ref_dcm.dcm' -not -name '*.mat' -not -name 'log' -delete
 fi
