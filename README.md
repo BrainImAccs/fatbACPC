@@ -28,8 +28,9 @@ Options to `fatbACPC.bash`:
 ```
  -i --input [arg]    Directory containing the DICOM input files. Required.
  -k --keep-workdir   After running, copy the temporary work directory into the input directory.
- -c --cleanup        After running, empty the source directory (reference DICOM and translation matrix are kept)
- -p --no-pacs        Do not send the results to the PACS.
+ -c --cleanup        After running, empty the source directory (reference DICOM, translation matrices and logs are kept).
+ -t --total-cleanup  After running, delete the source directory.
+ -n --no-pacs        Do not send the results to the PACS.
  -v                  Enable verbose mode, print script as it is executed.
  -d --debug          Enables debug mode.
  -h --help           This page.
@@ -37,62 +38,62 @@ Options to `fatbACPC.bash`:
 
 # Installation
 
-## Requirements
+We recommend installing fatbACPC using Docker. The container will expose a DICOM listener, which will accept brain images.
 
-We are listing the software versions we used (likely the latest available during development), but we are currently not aware that we rely on any features that are specific to one of the software's versions.
+The results will be sent back to a DICOM node. For testing, you can for example use [Horos](https://horosproject.org) (on a Mac) to send and receive DICOM files.
 
-* [BrainSTEM](https://github.com/BrainImAccs/BrainSTEM)
-* [BASH](https://www.gnu.org/software/bash/), we used v4.4.19(1)
-* [bc](https://www.gnu.org/software/bc/), we used 1.07.1
-* [FSL](https://fsl.fmrib.ox.ac.uk/), we used v5.0.11
-* In the current early state: [Git](https://git-scm.com), we used v2.17.1
-* [parallel](https://www.gnu.org/software/parallel/), we used v20180822
-* [Python 2 or 3](https://www.python.org), we used v2.7.15
-  * [NumPy](http://www.numpy.org) , we used v1.14.5
-  * [six](https://pypi.org/project/six/), we used v1.11.0
-
-## Installation
-
-fatbACPC is in the `modules/` subdirectory of BrainSTEM (after you [initialized and updated the submodules](https://github.com/BrainImAccs/BrainSTEM#installation)).
-
-# Configuration
-
-Copy the setup templates:
+fatbACPC will be made available on the Docker Hub soon. Currently, please download the Dockerfile and then build the image:
 
 ```bash
-$ cd modules/fatbACPC
-$ cp setup.fatbACPC.bash-template setup.fatbACPC.bash
-```
-
-Update the PATH to FSL in `setup.fatbACPC.bash`:
-
-```bash
-# Setup FSL
-#
-export FSLDIR="/path/to/fsl-5.0.11"
-```
-
-By default, mean slabs are only generated for CT examinations.
-
-```bash
-# Intended slice thickness for DICOM export in millimetres (mm),
-# which will be matched as close as possible.
-#
-# Use -1 to not generate any mean slabs, for example on isometric
-# MRI acquisitions.
-#
-intended_slice_thickness_ct=5
-intended_slice_thickness_t1=-1
-intended_slice_thickness_t2=-1
+$ docker build -t fatbacpc ./
 ```
 
 # Running
 
-Make sure that you [enable fatbACPC in BrainSTEM](https://github.com/BrainImAccs/BrainSTEM#assign-jobs-to-queue).
+Environment variables may be used to configure aspects of BrainSTEM and fatbACPC (please see (`setup.(brainstem|fatbACPC).bash`) and BrainSTEM's `tools/startJob.bash-template`. For example, to have the results sent back to IP `192.168.0.27`, port `11112` (AE Title `destination`), you may execute the container as follows:
 
-# Debugging
+```bash
+$ docker run -it \
+	-p 10105:10105/tcp \
+	--env called_aetitle=destination \
+	--env peer=192.168.0.27 \
+	--env port=11112 \
+	fatbacpc
+```
 
-Please see https://github.com/BrainImAccs/BrainSTEM#debugging
+In the following example, 6 jobs may be processed in parallel, and the reference DICOM file, transformation matrices and logs are stored outside the container:
+
+```bash
+$ docker run -d --rm \
+  -p 10105:10105/tcp \
+	--env called_aetitle=destination \
+	--env peer=192.168.0.27 \
+	--env port=11112 \
+  --env jobSlots=6 \
+  --env BIA_CLEANUP=1 \
+  --env BIA_KEEP_WORKDIR=0 \
+  --env BIA_DEBUG=1 \
+  --env BIA_WRITE_LOG=1 \
+  --mount type=tmpfs,destination=/opt/BrainSTEM/incoming/data,tmpfs-mode=1777 \
+  --mount type=bind,source=/mnt/docker/fatbACPC,destination=/opt/BrainSTEM/received/data/ \
+  fatbacpc
+```
+
+The DICOM node in the container listens on port `10105/tcp` by default.
+
+# Development
+
+If you would like to pull either fatbACPC or BrainSTEM from a different GitHub account, or would like to us a different branch, you may use `--build-arg` when building the cointainer:
+
+```bash
+$ docker build \
+  -t fatbacpc \
+  --build-arg BIA_GITHUB_USER_BRAINSTEM=user \
+  --build-arg BIA_BRANCH_BRAINSTEM=BrainSTEM-branch \
+  --build-arg BIA_GITHUB_USER_MODULE=user \
+  --build-arg BIA_BRANCH_MODULE=fatbACPC-branch \
+  ./
+```
 
 # Acknowledgements
 
