@@ -66,9 +66,9 @@ In the following example, 6 jobs may be processed in parallel, and the reference
 ```bash
 $ docker run -d --rm \
   -p 10105:10105/tcp \
-	--env called_aetitle=destination \
-	--env peer=192.168.0.27 \
-	--env port=11112 \
+  --env called_aetitle=destination \
+  --env peer=192.168.0.27 \
+  --env port=11112 \
   --env jobSlots=6 \
   --env BIA_CLEANUP=1 \
   --env BIA_KEEP_WORKDIR=0 \
