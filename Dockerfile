@@ -1,6 +1,7 @@
 FROM neurodebian:buster-non-free
 
-MAINTAINER Marius Vach <marius.vach@med.uni-duesseldorf.de>
+LABEL author="marius.vach@med.uni-duesseldorf.de"
+LABEL maintainer="christian.rubbert@med.uni-duesseldorf.de"
 
 ARG DEBIAN_FRONTEND="noninteractive"
 
@@ -59,7 +60,7 @@ RUN set -eux \
 #
 # FSL install adapted from NeuroDocker (https://github.com/ReproNim/neurodocker)
 #
-ENV FSL_VERSION 5.0.11
+ENV FSL_VERSION 6.0.4
 ENV FSLDIR /opt/fsl-${FSL_VERSION}
 ENV FSLOUTPUTTYPE NIFTI
 ENV FSLMULTIFILEQUIT TRUE
@@ -122,17 +123,30 @@ RUN set -eux \
 #
 # Install BrainSTEM and init the needed submodules
 #
+# To build from a different github.com repository, you may use variables:
+# $ docker build \
+#     -t fatbacpc \
+#     --build-arg BIA_GITHUB_USER_BRAINSTEM=user \
+#     --build-arg BIA_GITHUB_USER_MODULE=user \
+#     ./
+#
 ENV BIA_MODULE fatbACPC 
 
-ARG TSTAMP=unknown
+ARG BIA_TSTAMP=${NODE_ENV:-unknown}
+ARG BIA_GITHUB_USER_BRAINSTEM=${BIA_GITHUB_USER_BRAINSTEM:-BrainImAccs}
+ARG BIA_BRANCH_BRAINSTEM=${BIA_BRANCH_BRAINSTEM:-docker-cat12.7-standalone}
+ARG BIA_GITHUB_USER_MODULE=${BIA_GITHUB_USER_MODULE:-BrainImAccs}
+ARG BIA_BRANCH_MODULE=${BIA_BRANCH_MODULE:-docker}
 RUN set -eux \
-  && git clone https://github.com/BrainImAccs/BrainSTEM.git /opt/BrainSTEM \
+  && git clone https://github.com/${BIA_GITHUB_USER_BRAINSTEM}/BrainSTEM.git /opt/BrainSTEM \
   && cd /opt/BrainSTEM \
-  && git checkout docker-cat12.7-standalone \
+  && git checkout ${BIA_BRANCH_BRAINSTEM} \
+  && git config submodule.modules/fatbACPC.url https://github.com/${BIA_GITHUB_USER_MODULE}/fatbACPC.git \
   && git submodule update --init modules/${BIA_MODULE} \
   && cd /opt/BrainSTEM/modules/${BIA_MODULE} \
+  && git checkout ${BIA_BRANCH_MODULE} \
   && cat /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash-template | \
-      sed -e "s%^FSLDIR=/path/to/fsl-${FSL_VERSION}%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
+      sed -e "s%^FSLDIR=/path/to/fsl-.*%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
       > /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash \
   && cp \
       /opt/BrainSTEM/setup.brainstem.bash-template \
