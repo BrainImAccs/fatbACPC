@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This script decomposes the translation matrix and prints the rotations performed in degrees.
 # It uses functions from fslpy, which are based on the following two files:
@@ -198,7 +198,7 @@ def main(argv):
   # Degrees
   # print 'Degrees: %.3f %.3f %.3f' % (math.degrees(result[2][0]), math.degrees(result[2][1]), math.degrees(result[2][2]))
 
-  print('%.3f %.3f %.3f') % (math.degrees(result[2][0]), math.degrees(result[2][1]), math.degrees(result[2][2]))
+  print('%.3f %.3f %.3f' % (math.degrees(result[2][0]), math.degrees(result[2][1]), math.degrees(result[2][2])))
 
 if __name__ == "__main__":
    main(sys.argv[1:])

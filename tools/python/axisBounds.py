@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This script returns the z-height after applying a transformation matrix to an image volume.
 # It uses functions from fslpy, which are based on the following two files:
 #
-# https://git.fmrib.ox.ac.uk/ndcn0236/fslpy/blob/88d3ca938247ea07125eb167420aa913298d13e0/fsl/utils/transform.py
+# https://git.fmrib.ox.ac.uk/ndcn0236/fslpy/-/blob/c1580382243f8c16b8f464d85f53cc1d8994fda4/fsl/transform/affine.py
 # https://git.fmrib.ox.ac.uk/ndcn0236/fslpy/blob/88d3ca938247ea07125eb167420aa913298d13e0/tests/test_transform.py
 #
 # The functions used are: readlines, _fillPoints, axisBounds and transform.
@@ -34,7 +34,9 @@
 #
 
 import numpy as np
-import collections
+import collections.abc as abc
+import numpy           as np
+import numpy.linalg    as linalg
 
 import six
 
@@ -65,13 +67,13 @@ def _fillPoints(p, axes):
     or an ``N*2`` or ``N*3`` array.
     """
 
-    if not isinstance(p, collections.Iterable): p = [p]
+    if not isinstance(p, abc.Iterable): p = [p]
 
     p = np.array(p)
 
     if axes is None: return p
 
-    if not isinstance(axes, collections.Iterable): axes = [axes]
+    if not isinstance(axes, abc.Iterable): axes = [axes]
 
     if p.ndim == 1:
         p = p.reshape((len(p), 1))
@@ -172,7 +174,7 @@ def axisBounds(shape,
     if axes is None:
         axes = [0, 1, 2]
 
-    elif not isinstance(axes, collections.Iterable):
+    elif not isinstance(axes, abc.Iterable):
         scalar = True
         axes   = [axes]
 
@@ -267,7 +269,6 @@ def transform(p, xform, axes=None, vector=False):
     else:           return t
 
 
-
 def main(argv):
   dim1 = ''
   dim2 = ''
@@ -296,7 +297,7 @@ def main(argv):
   shape = (dim1, dim2, dim3)
   result = axisBounds(shape, xform, axes = 2, boundary = "both", origin = "centre")
 
-  print('(%s, %s) = %s') % (result[0], result[1], result[1] - result[0])
+  print('(%s, %s) = %s' % (result[0], result[1], result[1] - result[0]))
 
 if __name__ == "__main__":
    main(sys.argv[1:])

@@ -171,7 +171,7 @@ function acpcAlignment {
   # Start FLIRT registration process
   doFlirt "${nii_to_flirt}" "${output_dir}" "${template}"
 
-  local degrees=$(/usr/bin/env python "${__dir}/tools/python/decompose.py" --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
+  local degrees=$(/usr/bin/env python3 "${__dir}/tools/python/decompose.py" --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
   local deg1=$(echo $degrees | cut -d' ' -f1)
   local deg2=$(echo $degrees | cut -d' ' -f2)
   local deg3=$(echo $degrees | cut -d' ' -f3)
@@ -200,7 +200,7 @@ function acpcAlignment {
 
     # Restart FLIRT registration using the brain-extracted volume
     doFlirt "${nii_to_flirt}" "${output_dir}" "${template}"
-    local degrees=$(/usr/bin/env python "${__dir}/tools/python/decompose.py" --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
+    local degrees=$(/usr/bin/env python3 "${__dir}/tools/python/decompose.py" --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
     info "    Rotations (°): ${degrees}"
   fi
 
@@ -209,7 +209,7 @@ function acpcAlignment {
   local ref_dim1=$("${FSLDIR}/bin/fslval" "${input_nii}" dim1 | bc -l)
   local ref_dim2=$("${FSLDIR}/bin/fslval" "${input_nii}" dim2 | bc -l)
   # ref_dim3 was extracted above
-  local axisBounds=$(/usr/bin/env python "${__dir}/tools/python/axisBounds.py" --dim1=${ref_dim1} --dim2=${ref_dim2} --dim3=${ref_dim3} --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
+  local axisBounds=$(/usr/bin/env python3 "${__dir}/tools/python/axisBounds.py" --dim1=${ref_dim1} --dim2=${ref_dim2} --dim3=${ref_dim3} --xform="${output_dir}/xfms/acpc-aff2rigid.mat")
   info "    Dim3 (z-height) after aff2rigid: ${axisBounds}"
   local new_dim3=$(echo ${axisBounds} | sed -e 's/.* = //')
 
