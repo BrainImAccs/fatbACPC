@@ -141,7 +141,7 @@ if [[ ! -f "${__dir}/setup.fatbACPC.bash" ]]; then
 else
   # shellcheck source=setup.fatbACPC.bash
   source "${__dir}/setup.fatbACPC.bash"
-  export LANG=${language_encoding}
+  export LC_ALL=${language_encoding}
 fi
 
 # Check if the input/source directory exists
