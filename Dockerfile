@@ -164,6 +164,6 @@ RUN set -eux \
 
 USER bia
 
-EXPOSE 10105/tcp
+EXPOSE 10104/tcp
 
 ENTRYPOINT ["/opt/entry.bash"]

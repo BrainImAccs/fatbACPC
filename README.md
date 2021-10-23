@@ -54,7 +54,7 @@ Environment variables may be used to configure aspects of BrainSTEM and fatbACPC
 
 ```bash
 $ docker run -it \
-	-p 10105:10105/tcp \
+	-p 10104:10104/tcp \
 	--env called_aetitle=destination \
 	--env peer=192.168.0.27 \
 	--env port=11112 \
@@ -65,7 +65,7 @@ In the following example, 6 jobs may be processed in parallel, and the reference
 
 ```bash
 $ docker run -d --rm \
-  -p 10105:10105/tcp \
+  -p 10104:10104/tcp \
   --env called_aetitle=destination \
   --env peer=192.168.0.27 \
   --env port=11112 \
@@ -79,7 +79,7 @@ $ docker run -d --rm \
   fatbacpc
 ```
 
-The DICOM node in the container listens on port `10105/tcp` by default.
+The DICOM node in the container listens on port `10104/tcp` by default.
 
 # Development
 
