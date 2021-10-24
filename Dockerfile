@@ -1,4 +1,4 @@
-FROM neurodebian:buster-non-free
+FROM neurodebian:bullseye-non-free
 
 LABEL author="marius.vach@med.uni-duesseldorf.de"
 LABEL maintainer="christian.rubbert@med.uni-duesseldorf.de"
@@ -8,9 +8,6 @@ ARG DEBIAN_FRONTEND="noninteractive"
 #
 # Set up the base system with dependencies
 #
-ENV LANG en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-
 RUN set -eux \
   && apt-get update -qq \
   && apt-get -y upgrade \
@@ -18,6 +15,7 @@ RUN set -eux \
       apt-utils \
       bzip2 \
       ca-certificates \
+      iproute2 \
       wget \
       locales \
       unzip \
@@ -27,6 +25,10 @@ RUN set -eux \
   && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
   && dpkg-reconfigure --frontend=noninteractive locales \
   && update-locale LANG="en_US.UTF-8"
+
+ENV LANGUAGE en_US
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
 #
 # dcm2niix source install adapted from NeuroDocker (https://github.com/ReproNim/neurodocker)
@@ -132,7 +134,7 @@ RUN set -eux \
 #
 ENV BIA_MODULE fatbACPC 
 
-ARG BIA_TSTAMP=${NODE_ENV:-unknown}
+ARG BIA_TSTAMP=${BIA_TSTAMP:-unknown}
 ARG BIA_GITHUB_USER_BRAINSTEM=${BIA_GITHUB_USER_BRAINSTEM:-BrainImAccs}
 ARG BIA_BRANCH_BRAINSTEM=${BIA_BRANCH_BRAINSTEM:-docker-cat12.7-standalone}
 ARG BIA_GITHUB_USER_MODULE=${BIA_GITHUB_USER_MODULE:-BrainImAccs}
@@ -141,16 +143,17 @@ RUN set -eux \
   && git clone https://github.com/${BIA_GITHUB_USER_BRAINSTEM}/BrainSTEM.git /opt/BrainSTEM \
   && cd /opt/BrainSTEM \
   && git checkout ${BIA_BRANCH_BRAINSTEM} \
-  && git config submodule.modules/fatbACPC.url https://github.com/${BIA_GITHUB_USER_MODULE}/fatbACPC.git \
+  && git config submodule.modules/fatbACPC.url https://github.com/${BIA_GITHUB_USER_MODULE}/${BIA_MODULE}.git \
   && git submodule update --init modules/${BIA_MODULE} \
   && cd /opt/BrainSTEM/modules/${BIA_MODULE} \
   && git checkout ${BIA_BRANCH_MODULE} \
-  && cat /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash-template | \
-      sed -e "s%^FSLDIR=/path/to/fsl-.*%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
-      > /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash \
   && cp \
-      /opt/BrainSTEM/setup.brainstem.bash-template \
-      /opt/BrainSTEM/setup.brainstem.bash \
+      /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash-template \
+      /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash \
+  && cat /opt/BrainSTEM/setup.brainstem.bash-template | \
+      sed \
+        -e "s%^FSLDIR=/path/to/fsl-.*%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
+      > /opt/BrainSTEM/setup.brainstem.bash \
   && cp \
       /opt/BrainSTEM/tools/startJob.bash-template \
       /opt/BrainSTEM/tools/startJob.bash \

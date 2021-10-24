@@ -92,8 +92,11 @@ $ docker build \
   --build-arg BIA_BRANCH_BRAINSTEM=BrainSTEM-branch \
   --build-arg BIA_GITHUB_USER_MODULE=user \
   --build-arg BIA_BRANCH_MODULE=fatbACPC-branch \
+  --build-arg BIA_TSTAMP=$(date "+%s") \
   ./
 ```
+
+By providing a timestamp to `BIA_TSTAMP` Docker will always pull the latest git version of fatbACPC and BrainSTEM.
 
 # Acknowledgements
 
