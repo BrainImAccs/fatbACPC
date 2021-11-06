@@ -14,6 +14,7 @@ The [Anterior Commissure - Posterior Commissure (ACPC) line](https://radiopaedia
 
 ![Screenshot of the MNI ICBM 2009c Nonlinear Symmetric T1 template highlighting the ACPC line](img/mni_icbm152_t1_tal_nlin_asym_09c_acpc.png "Screenshot of the MNI ICBM 2009c Nonlinear Symmetric T1 template highlighting the ACPC line")
 ![Screenshot of the CT template from the Clinical toolbox for SPM 8/2014 highlighting the ACPC line](img/scct_unsmooth_acpc.png "Screenshot of the CT template from the Clinical toolbox for SPM 8/2014 highlighting the ACPC line")
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FBrainImAccs%2FfatbACPC.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FBrainImAccs%2FfatbACPC?ref=badge_shield)
 
 The ACPC line is similar to the orbitomeatal line used as a common reference plane in CT, which is about 9° steeper than the ACPC line. Aligning both CT and MR scans to the ACPC line should yield image volumes, which are easily comparable longitudinally and between modalities.
 
@@ -103,3 +104,7 @@ By providing a timestamp to `BIA_TSTAMP` Docker will always pull the latest git 
 Please see [templates/README.md](https://github.com/brainimaccs/fatbACPC/blob/master/templates/README.md) for information on the templates.
 
 The main scripts are based on the [BASH3 Boilerplate](http://bash3boilerplate.sh).
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FBrainImAccs%2FfatbACPC.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FBrainImAccs%2FfatbACPC?ref=badge_large)
