@@ -1,8 +1,47 @@
+ARG BIA_MODULE=fatbACPC
+
+ARG DCM2NIIX_VERSION=v1.0.20210317
+
+# ---- Start of the dcm2niix build stage ----
+#
+# dcm2niix source install adapted from NeuroDocker (https://github.com/ReproNim/neurodocker)
+#
+FROM neurodebian:bullseye-non-free AS dcm2niix-builder
+
+ARG DCM2NIIX_VERSION
+ENV DCM2NIIX_VERSION=${DCM2NIIX_VERSION}
+
+RUN set -eux \
+  && echo Building dcm2niix ${DCM2NIIX_VERSION} \
+  && apt-get update -qq \
+  && apt-get install -y -q --no-install-recommends \
+      ca-certificates \
+      cmake \
+      g++ \
+      gcc \
+      git \
+      make \
+      pigz \
+      zlib1g-dev \
+  && git clone https://github.com/rordenlab/dcm2niix /tmp/dcm2niix \
+  && cd /tmp/dcm2niix \
+  && git fetch --tags \
+  && git checkout ${DCM2NIIX_VERSION} \
+  && mkdir /tmp/dcm2niix/build \
+  && cd /tmp/dcm2niix/build \
+  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/opt/dcm2niix .. \
+  && make \
+  && make install
+# ---- End of the dcm2niix build stage ----
+
+# Following https://micromamba-docker.readthedocs.io/en/latest/advanced_usage.html#adding-micromamba-to-an-existing-docker-image
+# bring in the micromamba image so we can copy files from it
+FROM mambaorg/micromamba:1.5.3 as micromamba
+
+# ---- Start of the main image ----
+
 FROM neurodebian:bullseye-non-free
-
-LABEL author="marius.vach@med.uni-duesseldorf.de"
-LABEL maintainer="christian.rubbert@med.uni-duesseldorf.de"
-
+LABEL maintainer="Christian Rubbert <christian.rubbert@med.uni-duesseldorf.de>"
 ARG DEBIAN_FRONTEND="noninteractive"
 
 #
@@ -20,6 +59,11 @@ RUN set -eux \
       locales \
       unzip \
       git \
+      dcmtk=3.6.5-1 \
+      nifti2dicom=0.4.11-3 \
+      parallel \
+      libjpeg-dev \
+      bc \
   && apt-get clean \
   && rm -rf /tmp/hsperfdata* /var/*/apt/*/partial /var/lib/apt/lists/* /var/log/apt/term* \
   && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
@@ -31,142 +75,78 @@ ENV LANG en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 #
-# dcm2niix source install adapted from NeuroDocker (https://github.com/ReproNim/neurodocker)
+# Install dcm2niix
 #
-ENV DCM2NIIX_VERSION v1.0.20210317
-ENV PATH /opt/dcm2niix-${DCM2NIIX_VERSION}/bin:$PATH
+COPY --from=dcm2niix-builder /opt/dcm2niix /opt/dcm2niix
+ENV PATH /opt/dcm2niix/bin:$PATH
 
-RUN set -eux \
-  && apt-get update -qq \
-  && apt-get install -y -q --no-install-recommends \
-      cmake \
-      g++ \
-      gcc \
-      git \
-      make \
-      pigz \
-      zlib1g-dev \
-  && apt-get clean \
-  && rm -rf /tmp/hsperfdata* /var/*/apt/*/partial /var/lib/apt/lists/* /var/log/apt/term* \
-  && git clone https://github.com/rordenlab/dcm2niix /tmp/dcm2niix \
-  && cd /tmp/dcm2niix \
-  && git fetch --tags \
-  && git checkout ${DCM2NIIX_VERSION} \
-  && mkdir /tmp/dcm2niix/build \
-  && cd /tmp/dcm2niix/build \
-  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/opt/dcm2niix-${DCM2NIIX_VERSION} .. \
-  && make \
-  && make install \
-  && rm -rf /tmp/dcm2niix
+# Following https://micromamba-docker.readthedocs.io/en/latest/advanced_usage.html#adding-micromamba-to-an-existing-docker-image
+# if your image defaults to a non-root user, then you may want to make the
+# next 3 ARG commands match the values in your image. You can get the values
+# by running: docker run --rm -it my/image id -a
 
-#
-# FSL install adapted from NeuroDocker (https://github.com/ReproNim/neurodocker)
-#
-ENV FSL_VERSION 6.0.4
-ENV FSLDIR /opt/fsl-${FSL_VERSION}
+ARG MAMBA_USER=bia
+ARG MAMBA_USER_ID=999
+ARG MAMBA_USER_GID=999
+ENV MAMBA_USER $MAMBA_USER
+ENV MAMBA_ROOT_PREFIX "/opt/conda"
+ENV MAMBA_EXE "/bin/micromamba"
+
+ENV FSLDIR ${MAMBA_ROOT_PREFIX}
 ENV FSLOUTPUTTYPE NIFTI
 ENV FSLMULTIFILEQUIT TRUE
-ENV FSLTCLSH /opt/fsl-${FSL_VERSION}/bin/fsltclsh
-ENV FSLWISH /opt/fsl-${FSL_VERSION}/bin/fslwish
-ENV PATH /opt/fsl-${FSL_VERSION}/bin:$PATH
+ENV PATH ${FSLDIR}/bin:$PATH
+
+COPY --from=micromamba "$MAMBA_EXE" "$MAMBA_EXE"
+COPY --from=micromamba /usr/local/bin/_activate_current_env.sh /usr/local/bin/_activate_current_env.sh
+COPY --from=micromamba /usr/local/bin/_dockerfile_shell.sh /usr/local/bin/_dockerfile_shell.sh
+COPY --from=micromamba /usr/local/bin/_entrypoint.sh /usr/local/bin/_entrypoint.sh
+COPY --from=micromamba /usr/local/bin/_dockerfile_initialize_user_accounts.sh /usr/local/bin/_dockerfile_initialize_user_accounts.sh
+COPY --from=micromamba /usr/local/bin/_dockerfile_setup_root_prefix.sh /usr/local/bin/_dockerfile_setup_root_prefix.sh
+
+COPY --chown=$MAMBA_USER_ID:$MAMBA_USER_GID . /opt/bia
+
+ENV FSL_CONDA_CHANNEL="https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public"
 
 RUN set -eux \
-  && apt-get update -qq \
-  && apt-get install -y -q --no-install-recommends \
-      bc \
-      dc \
-      file \
-      libfontconfig1 \
-      libfreetype6 \
-      libgl1-mesa-dev \
-      libgl1-mesa-dri \
-      libglu1-mesa-dev \
-      libgomp1 \
-      libice6 \
-      libxcursor1 \
-      libxft2 \
-      libxinerama1 \
-      libxrandr2 \
-      libxrender1 \
-      libxt6 \
-      sudo \
-      wget \
-  && apt-get clean \
-  && rm -rf /tmp/hsperfdata* /var/*/apt/*/partial /var/lib/apt/lists/* /var/log/apt/term* \
-  && mkdir -p /opt/fsl-${FSL_VERSION} \
-  && wget \
-      --progress=bar:force \
-      -O - \
-      https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-${FSL_VERSION}-centos6_64.tar.gz | \
-        tar \
-          -xz \
-          -C /opt/fsl-${FSL_VERSION} \
-          --strip-components 1 \
-  && bash /opt/fsl-${FSL_VERSION}/etc/fslconf/fslpython_install.sh -f /opt/fsl-${FSL_VERSION}
-
-#
-# Install BrainImAccs fatbACPC dependencies
-#
-RUN set -eux \
-  && apt-get update -qq \
-  && apt-get install -y -q --no-install-recommends \
-      bc \
-      dcmtk \
-      nifti2dicom \
-      parallel \
-      python3-pip \
-      python3-setuptools \
-  && apt-get clean \
-  && rm -rf /tmp/hsperfdata* /var/*/apt/*/partial /var/lib/apt/lists/* /var/log/apt/term* \
-  && pip3 install --no-cache-dir \
-      numpy \
-      six 
-
-#
-# Install BrainSTEM and init the needed submodules
-#
-# To build from a different github.com repository, you may use variables:
-# $ docker build \
-#     -t fatbacpc \
-#     --build-arg BIA_GITHUB_USER_BRAINSTEM=user \
-#     --build-arg BIA_GITHUB_USER_MODULE=user \
-#     ./
-#
-ENV BIA_MODULE fatbACPC 
-
-ARG BIA_TSTAMP=${BIA_TSTAMP:-unknown}
-ARG BIA_GITHUB_USER_BRAINSTEM=${BIA_GITHUB_USER_BRAINSTEM:-BrainImAccs}
-ARG BIA_BRANCH_BRAINSTEM=${BIA_BRANCH_BRAINSTEM:-main}
-ARG BIA_GITHUB_USER_MODULE=${BIA_GITHUB_USER_MODULE:-BrainImAccs}
-ARG BIA_BRANCH_MODULE=${BIA_BRANCH_MODULE:-main}
-RUN set -eux \
-  && git clone https://github.com/${BIA_GITHUB_USER_BRAINSTEM}/BrainSTEM.git /opt/BrainSTEM \
-  && cd /opt/BrainSTEM \
-  && git checkout ${BIA_BRANCH_BRAINSTEM} \
-  && git config submodule.modules/fatbACPC.url https://github.com/${BIA_GITHUB_USER_MODULE}/${BIA_MODULE}.git \
-  && git submodule update --init modules/${BIA_MODULE} \
-  && cd /opt/BrainSTEM/modules/${BIA_MODULE} \
-  && git checkout ${BIA_BRANCH_MODULE} \
-  && cp \
-      /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash-template \
-      /opt/BrainSTEM/modules/${BIA_MODULE}/setup.${BIA_MODULE}.bash \
-  && cat /opt/BrainSTEM/setup.brainstem.bash-template | \
-      sed \
-        -e "s%^FSLDIR=/path/to/fsl-.*%FSLDIR=/opt/fsl-${FSL_VERSION}%" \
-      > /opt/BrainSTEM/setup.brainstem.bash \
-  && cp \
-      /opt/BrainSTEM/tools/startJob.bash-template \
-      /opt/BrainSTEM/tools/startJob.bash \
-  && useradd --system --user-group --create-home --uid 999 bia \
-  && echo '#!/usr/bin/env bash' >> /opt/entry.bash \
-  && echo 'bash /opt/BrainSTEM/incoming/incoming.bash &' >> /opt/entry.bash \
-  && echo 'bash /opt/BrainSTEM/received/queue.bash &' >> /opt/entry.bash \
-  && echo 'wait' >> /opt/entry.bash \
-  && chmod 755 /opt/entry.bash /opt/BrainSTEM/tools/startJob.bash \
-  && chown bia:bia /opt/BrainSTEM/incoming /opt/BrainSTEM/received
+  && /usr/local/bin/_dockerfile_initialize_user_accounts.sh \
+  && /usr/local/bin/_dockerfile_setup_root_prefix.sh \
+  && micromamba install --yes --name base --channel $FSL_CONDA_CHANNEL \
+    fsl-avwutils=2209.2 \
+    fsl-miscmaths=2203.2 \
+    fsl-flirt=2111.2 \
+    fsl-bet2=2111.5 \
+    nibabel=5.1.0 \
+    pydicom=2.4.3 \
+    matplotlib=3.8.0 \
+    pillow=10.0.1 \
+    colorcet=3.0.1 \
+    --channel conda-forge \
+  && micromamba clean --all --yes
 
 USER bia
 
+ARG BIA_MODULE
+ENV BIA_MODULE=${BIA_MODULE}
+ARG BIA_TSTAMP=${BIA_TSTAMP:-unknown}
+
+RUN set -eux \
+  && cp \
+      /opt/bia/setup.${BIA_MODULE}.bash-template \
+      /opt/bia/setup.${BIA_MODULE}.bash \
+  && cat /opt/bia/BrainSTEM/setup.brainstem.bash-template | \
+      sed \
+        -e "s%^FSLDIR=/path/to/fsl-.*%FSLDIR=${FSLDIR}%" \
+      > /opt/bia/BrainSTEM/setup.brainstem.bash \
+  && cp \
+      /opt/bia/BrainSTEM/tools/startJob.bash-template \
+      /opt/bia/BrainSTEM/tools/startJob.bash \
+  && chmod 755 /opt/bia/BrainSTEM/tools/startJob.bash \
+  && git config --global --add safe.directory /opt/bia \
+  && (cd /opt/bia && git describe --always) >> /opt/bia/version \
+  && rm -rf /opt/bia/.git
+
 EXPOSE 10104/tcp
 
-ENTRYPOINT ["/opt/entry.bash"]
+SHELL ["/usr/local/bin/_dockerfile_shell.sh"]
+ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "/opt/bia/tools/bash/docker_entry_point.bash"]

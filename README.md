@@ -2,8 +2,6 @@
 
 Everyday CT or MR examinations are supposed to be acquired in the same fashion, but slight deviations (e.g. due to subject/patient movement, differences in planning standards for MR and CT, or improper planning) may result in not easily comparable images. The fully automatic tilting of brainscans to Anterior Commissure - Posterior Commissure (fatbACPC) tool is meant to align CT and MR scans to the [ACPC](https://radiopaedia.org/articles/anterior-commissure-posterior-commissure-line) line to yield easily comparable images.
 
-fatbACPC is meant to be used as a submodule of [BrainSTEM](https://github.com/BrainImAccs/BrainSTEM).
-
 Please note, this software is research-only and must not be used for clinical decisions/diagnosis.
 
 # Details
@@ -42,9 +40,11 @@ We recommend installing fatbACPC using Docker. The container will expose a DICOM
 
 The results will be sent back to a DICOM node. For testing, you can for example use [Horos](https://horosproject.org) (on a Mac) to send and receive DICOM files.
 
-fatbACPC will be made available on the Docker Hub soon. Currently, please download the Dockerfile and then build the image:
+To build fatbACPC, please:
 
 ```bash
+$ git clone --recurse-submodules https://github.com/BrainImAccs/fatbACPC.git
+$ cd fatbACPC
 $ docker build -t fatbacpc ./
 ```
 
@@ -80,23 +80,6 @@ $ docker run -d --rm \
 ```
 
 The DICOM node in the container listens on port `10104/tcp` by default.
-
-# Development
-
-If you would like to pull either fatbACPC or BrainSTEM from a different GitHub account, or would like to us a different branch, you may use `--build-arg` when building the cointainer:
-
-```bash
-$ docker build \
-  -t fatbacpc \
-  --build-arg BIA_GITHUB_USER_BRAINSTEM=user \
-  --build-arg BIA_BRANCH_BRAINSTEM=BrainSTEM-branch \
-  --build-arg BIA_GITHUB_USER_MODULE=user \
-  --build-arg BIA_BRANCH_MODULE=fatbACPC-branch \
-  --build-arg BIA_TSTAMP=$(date "+%s") \
-  ./
-```
-
-By providing a timestamp to `BIA_TSTAMP` Docker will always pull the latest git version of fatbACPC and BrainSTEM.
 
 # Acknowledgements
 

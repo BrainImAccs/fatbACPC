@@ -22,10 +22,6 @@
 # See setup.fatbACPC.bash (and also setup.brainstem.bash) for configuration options.
 # Check README for requirements.
 #
-# Version history:
-# 2018-09-13 - v0.1 - Initial version
-# 2019-02-26 - v0.2 - Split into "fatbACPC" and base functions "brainstem"
-#
 # Authors:
 # - Christian Rubbert <christian.rubbert@med.uni-duesseldorf.de>
 # - Julian Caspers <julian.caspers@med.uni-duesseldorf.de>
@@ -68,10 +64,14 @@ read -r -d '' __helptext <<-'EOF' || true # exits non-zero when EOF encountered
 EOF
 
 # shellcheck source=b3bp.bash
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/b3bp.bash"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/BrainSTEM/tools/b3bp.bash"
 
 # Set version
-version_acpc=$(cd "${__dir}" && git describe --always)
+if [[ -e "${__dir}/version" ]]; then
+  version_acpc=$(cat "${__dir}/version")
+else
+  version_acpc=$(cd "${__dir}" && git describe --always)
+fi
 
 # Set UID prefix
 prefixUID=11
@@ -158,16 +158,16 @@ fi
 ### Source the necessary functions
 ##############################################################################
 
-# shellcheck source=../brainstem/tools/bash/getDCMTag.bash
-source "${__dir}/../../tools/bash/getDCMTag.bash"
-# shellcheck source=../brainstem/tools/bash/convertDCM2NII.bash
-source "${__dir}/../../tools/bash/convertDCM2NII.bash"
-# shellcheck source=../brainstem/tools/bash/convertNII2DCM.bash
-source "${__dir}/../../tools/bash/convertNII2DCM.bash"
-# shellcheck source=../brainstem/tools/bash/copyDCMTags.bash
-source "${__dir}/../../tools/bash/copyDCMTags.bash"
-# shellcheck source=../brainstem/tools/bash/sendDCM.bash
-source "${__dir}/../../tools/bash/sendDCM.bash"
+# shellcheck source=../BrainSTEM/tools/bash/getDCMTag.bash
+source "${__dir}/BrainSTEM/tools/bash/getDCMTag.bash"
+# shellcheck source=../BrainSTEM/tools/bash/convertDCM2NII.bash
+source "${__dir}/BrainSTEM/tools/bash/convertDCM2NII.bash"
+# shellcheck source=../BrainSTEM/tools/bash/convertNII2DCM.bash
+source "${__dir}/BrainSTEM/tools/bash/convertNII2DCM.bash"
+# shellcheck source=../BrainSTEM/tools/bash/copyDCMTags.bash
+source "${__dir}/BrainSTEM/tools/bash/copyDCMTags.bash"
+# shellcheck source=../BrainSTEM/tools/bash/sendDCM.bash
+source "${__dir}/BrainSTEM/tools/bash/sendDCM.bash"
 
 # shellcheck source=bash/tools/acpcAlignment.bash
 source "${__dir}/tools/bash/acpcAlignment.bash"
